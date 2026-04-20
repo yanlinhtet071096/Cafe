@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, User, Lock, Mail, ChevronRight, LogOut } from 'lucide-react';
+import { Loader2, User, Lock, Mail, ChevronRight, LogOut, MapPin } from 'lucide-react';
+import { Branch } from '../types';
+import { profileService } from '../services/profileService';
 
 export function AuthPortal({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,16 +18,38 @@ export function AuthPortal({ onClose }: { onClose: () => void }) {
     setLoading(true);
     setError(null);
 
-    const { error: authError } = isSignUp 
-      ? await supabase.auth.signUp({ email, password })
-      : await supabase.auth.signInWithPassword({ email, password });
+    try {
+      if (isSignUp) {
+        if (!fullName) {
+          throw new Error("Full name is required.");
+        }
+        
+        const { data: signUpData, error: authError } = await supabase.auth.signUp({ email, password });
+        if (authError) throw authError;
 
-    if (authError) {
-      setError(authError.message);
-    } else {
+        if (signUpData.user) {
+          // Create profile
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: signUpData.user.id,
+              full_name: fullName,
+              role: 'staff' // default
+            });
+          
+          if (profileError) throw profileError;
+        }
+      } else {
+        const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+        if (authError) throw authError;
+      }
+      
       onClose();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -37,7 +62,7 @@ export function AuthPortal({ onClose }: { onClose: () => void }) {
       <motion.div 
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="bg-bakery-cream w-full max-w-md rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden"
+        className="bg-bakery-cream w-full max-w-md rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto"
       >
         {/* Background purely decorative */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-bakery-gold/5 rounded-full -mr-32 -mt-32 blur-3xl pointer-events-none" />
@@ -54,6 +79,20 @@ export function AuthPortal({ onClose }: { onClose: () => void }) {
 
           <form onSubmit={handleAuth} className="space-y-6">
             <div className="space-y-4">
+              {isSignUp && (
+                <div className="relative group">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-bakery-brown/20 group-focus-within:text-bakery-gold transition-colors" size={20} />
+                  <input 
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Full Name"
+                    required
+                    className="w-full pl-12 pr-6 py-4 bg-bakery-warm/30 border-2 border-transparent focus:border-bakery-gold focus:bg-white rounded-2xl outline-none transition-all placeholder:text-bakery-dark/20 text-bakery-brown font-medium"
+                  />
+                </div>
+              )}
+
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-bakery-brown/20 group-focus-within:text-bakery-gold transition-colors" size={20} />
                 <input 

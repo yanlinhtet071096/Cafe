@@ -1,16 +1,29 @@
 import { Order } from "../types";
 import { supabase } from "../lib/supabase";
 
-const STORAGE_KEY = "lumiere_orders";
+const getStorageKey = (userId?: string) => `lumiere_orders_${userId || 'guest'}`;
 
 export const orderService = {
   getOrders: async (): Promise<Order[]> => {
     try {
       // Try to get from Supabase first
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .order('timestamp', { ascending: false });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      let query = supabase.from('orders').select('*');
+
+      // Filter based on role
+      const { data: profile } = await supabase.from('profiles').select('branch_id, role').eq('id', user.id).single();
+      
+      if (profile) {
+        if (profile.role === 'staff') {
+          query = query.eq('user_id', user.id);
+        } else if (profile.role === 'manager') {
+          query = query.eq('branch_id', profile.branch_id);
+        }
+      }
+
+      const { data, error } = await query.order('timestamp', { ascending: false });
 
       if (error) throw error;
       
@@ -18,25 +31,26 @@ export const orderService = {
         return data.map(o => ({
           ...o,
           paymentMethod: o.payment_method, // mapping snake_case to camelCase
+          branchId: o.branch_id
         }));
       }
     } catch (err) {
       console.warn("Supabase fetch failed, falling back to local storage:", err);
     }
 
-    // Fallback to localStorage
-    const localData = localStorage.getItem(STORAGE_KEY);
+    // Fallback to user-specific localStorage
+    const { data: { user } } = await supabase.auth.getUser();
+    const localData = localStorage.getItem(getStorageKey(user?.id));
     return localData ? JSON.parse(localData) : [];
   },
 
   saveOrder: async (order: Order) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        console.warn("No authenticated user found. Saving to cloud skipped (will save locally).");
-        // We still proceed to save locally below
-      } else {
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('branch_id').eq('id', user.id).single();
+
         const { error } = await supabase
           .from('orders')
           .insert([{
@@ -46,26 +60,27 @@ export const orderService = {
             payment_method: order.paymentMethod,
             timestamp: order.timestamp,
             date: order.date,
-            user_id: user.id
+            user_id: user.id,
+            branch_id: profile?.branch_id
           }]);
 
-        if (error) {
-          console.error("Supabase RLS Error Details:", error);
-          throw error;
-        }
+        if (error) throw error;
       }
     } catch (err) {
       console.warn("Supabase save failed, saving to local storage:", err);
     }
 
-    // Always save to local for offline-first feel
-    const orders = await orderService.getOrdersLocalOnly();
+    // Save to user-specific local storage
+    const storageKey = getStorageKey(user?.id);
+    const localData = localStorage.getItem(storageKey);
+    const orders = localData ? JSON.parse(localData) : [];
     orders.push(order);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+    localStorage.setItem(storageKey, JSON.stringify(orders));
   },
 
-  getOrdersLocalOnly: (): Order[] => {
-    const data = localStorage.getItem(STORAGE_KEY);
+  getOrdersLocalOnly: async (): Promise<Order[]> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const data = localStorage.getItem(getStorageKey(user?.id));
     return data ? JSON.parse(data) : [];
   },
 

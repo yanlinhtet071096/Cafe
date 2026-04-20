@@ -3,17 +3,23 @@ import { SupplyItem } from "../types";
 
 export const supplyService = {
   async getItems() {
-    const { data, error } = await supabase
-      .from('items')
-      .select('*')
-      .order('createdAt', { ascending: false });
+    const { data: { user } } = await supabase.auth.getUser();
+    let query = supabase.from('items').select('*');
+
+    const { data: profile } = await supabase.from('profiles').select('branch_id, role').eq('id', user?.id).single();
     
+    if (profile && profile.role !== 'admin') {
+      query = query.eq('branch_id', profile.branch_id);
+    }
+
+    const { data, error } = await query.order('createdAt', { ascending: false });
     if (error) throw error;
     return data as SupplyItem[];
   },
 
   async addItem(name: string, quantity: string = "", note: string = "") {
     const { data: { user } } = await supabase.auth.getUser();
+    const { data: profile } = await supabase.from('profiles').select('branch_id').eq('id', user?.id).single();
     
     const { data, error } = await supabase
       .from('items')
@@ -21,7 +27,8 @@ export const supplyService = {
         name, 
         quantity, 
         note,
-        user_id: user?.id 
+        user_id: user?.id,
+        branch_id: profile?.branch_id
       }])
       .select();
     

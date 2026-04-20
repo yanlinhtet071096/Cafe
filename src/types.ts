@@ -10,6 +10,19 @@ export interface CartItem extends MenuItem {
   quantity: number;
 }
 
+export interface Branch {
+  id: string;
+  name: string;
+  location: string;
+}
+
+export interface UserProfile {
+  id: string;
+  branch_id: string;
+  role: 'staff' | 'manager' | 'admin';
+  full_name: string;
+}
+
 export interface Order {
   id: string;
   items: CartItem[];
@@ -18,6 +31,7 @@ export interface Order {
   timestamp: string;
   date: string;
   userId?: string;
+  branchId: string;
 }
 
 export interface SupplyItem {
@@ -27,6 +41,7 @@ export interface SupplyItem {
   quantity: string;
   isChecked: boolean;
   user_id?: string;
+  branch_id?: string;
   createdAt: string;
   updatedAt: string;
 }

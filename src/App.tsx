@@ -6,8 +6,9 @@
 import { motion, AnimatePresence } from "motion/react";
 import { Coffee, Croissant, MapPin, Clock, Instagram, Facebook, Phone, Menu as MenuIcon, X, ShoppingCart, Plus, Minus, Trash2, CreditCard, ChevronRight, CheckCircle, Receipt, BarChart3, User, LogOut } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
-import { MenuItem, CartItem, CheckoutStep, Order } from "./types";
+import { MenuItem, CartItem, CheckoutStep, Order, Branch, UserProfile } from "./types";
 import { orderService } from "./services/orderService";
+import { profileService } from "./services/profileService";
 import { SalesDashboard } from "./components/SalesDashboard";
 import { supabase } from "./lib/supabase";
 import { AuthPortal } from "./components/AuthPortal";
@@ -37,6 +38,8 @@ export default function App() {
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [branch, setBranch] = useState<Branch | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("cart");
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
@@ -81,7 +84,8 @@ export default function App() {
         total: cartTotal * 1.08,
         paymentMethod,
         timestamp: new Date().toISOString(),
-        date: new Date().toLocaleDateString()
+        date: new Date().toLocaleDateString(),
+        branchId: profile?.branch_id || ""
       };
       orderService.saveOrder(order);
       setCheckoutStep("receipt");
@@ -99,11 +103,34 @@ export default function App() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) {
+        profileService.getCurrentProfile().then(p => {
+          setProfile(p);
+          if (p?.branch_id) {
+            profileService.getBranchById(p.branch_id).then(setBranch);
+          }
+        });
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) {
+        profileService.getCurrentProfile().then(p => {
+          setProfile(p);
+          if (p?.branch_id) {
+            profileService.getBranchById(p.branch_id).then(setBranch);
+          } else {
+            setBranch(null);
+          }
+        });
+      } else {
+        setProfile(null);
+        setBranch(null);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -117,7 +144,7 @@ export default function App() {
     <div className="min-h-screen selection:bg-bakery-gold/30 selection:text-bakery-brown">
       {/* Sales Dashboard */}
       <AnimatePresence>
-        {isDashboardOpen && <SalesDashboard onClose={() => setIsDashboardOpen(false)} />}
+        {isDashboardOpen && <SalesDashboard onClose={() => setIsDashboardOpen(false)} userProfile={profile} />}
       </AnimatePresence>
 
       {/* Auth Portal */}
@@ -147,14 +174,21 @@ export default function App() {
                 >
                   <BarChart3 size={18} /> Dashboard
                 </button>
-                <div className="flex items-center gap-2 px-3 py-1 bg-bakery-warm rounded-full">
-                  <User size={14} className="text-bakery-gold" />
-                  <span className="text-[10px] font-bold text-bakery-brown truncate max-w-[80px]">
-                    {user.email?.split('@')[0]}
-                  </span>
-                  <button onClick={handleLogout} className="text-bakery-brown/20 hover:text-red-400 transition-colors">
-                    <LogOut size={14} />
-                  </button>
+                <div className="flex flex-col items-end">
+                  <div className="flex items-center gap-2 px-3 py-1 bg-bakery-warm rounded-full">
+                    <User size={14} className="text-bakery-gold" />
+                    <span className="text-[10px] font-bold text-bakery-brown truncate max-w-[80px]">
+                      {profile?.full_name || user.email?.split('@')[0]}
+                    </span>
+                    <button onClick={handleLogout} className="text-bakery-brown/20 hover:text-red-400 transition-colors">
+                      <LogOut size={14} />
+                    </button>
+                  </div>
+                  {branch && (
+                    <span className="text-[9px] uppercase tracking-tighter text-bakery-gold font-bold mt-1">
+                      {branch.name} Branch
+                    </span>
+                  )}
                 </div>
               </div>
             ) : (
