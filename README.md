@@ -1,20 +1,63 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Lumière Bakery & Café - Multi-Branch Management System
 
-# Run and deploy your AI Studio app
+Lumière is a sophisticated, artisanal bakery management system designed for multi-location operations. It features an elegant customer-facing landing page alongside a secure, tiered dashboard for staff and management.
 
-This contains everything you need to run your app locally.
+## 🌟 Key Features
 
-View your app in AI Studio: https://ai.studio/apps/74a0a1e8-66dc-4eb7-8bb3-0915a05cd07b
+- **Multi-Branch Isolation**: Support for multiple locations (e.g., Heritage District, Riverside).
+- **Tiered Role Access**:
+  - **Staff**: View only their personal transactions and branch-specific items.
+  - **Manager**: View all transactions and logistics for their assigned branch.
+  - **Admin**: Global visibility across all branches and full database management.
+- **Real-time POS**: Instant order placement and transaction recording.
+- **Supply Logistics**: Interactive checklist for branch-specific inventory management.
+- **Offline-First Resilience**: Data is cached locally per-user to ensure smooth operation even during network interruptions.
+- **Responsive Design**: Elegant UI that transitions seamlessly from mobile ordering to desktop management.
 
-## Run Locally
+## 🛠️ Tech Stack
 
-**Prerequisites:**  Node.js
+- **Frontend**: React 18, Vite, TypeScript.
+- **Styling**: Tailwind CSS, Framer Motion (for elegant animations).
+- **Backend/Database**: Supabase (PostgreSQL, Auth, RLS).
+- **Icons**: Lucide React.
 
+## 🗄️ Database Schema & Security
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+The system uses [Supabase](https://supabase.com/) with Row Level Security (RLS) to ensure data privacy.
+
+### Tables
+- `branches`: Defines physical bakery locations.
+- `profiles`: Connects Auth users to specific roles and branches.
+- `items`: Manages menu offerings per branch.
+- `orders`: Stores secure transaction data.
+
+### Security (RLS Policies)
+- The system enforces "Tiered Order Access":
+  - `Staff` user_id must match the authenticated user.
+  - `Manager` branch_id must match the user's profile branch.
+  - `Admin` has unconditional access.
+
+## 🚀 Setup & Installation
+
+### 1. Supabase Initialization
+Run the provided full-stack SQL script (located in your conversation history) in the Supabase SQL Editor. This will set up:
+- All required tables.
+- RLS Policies.
+- Automatic profile creation via Database Triggers.
+
+### 2. Environment Variables
+Ensure the following variables are set in your environment:
+- `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase Project URL.
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: Your Supabase Anon Key.
+
+### 3. Running Locally
+```bash
+npm install
+npm run dev
+```
+
+## 👩‍💼 Admin Management
+For maximum security and simplicity, all intensive management tasks (adding new branches, editing staff roles, updating menu prices) are performed directly through the **Supabase Table Editor**. The web app remains clean and focused on daily operations.
+
+---
+*Lumière - Crafting moments of light and sweetness across every branch.*
