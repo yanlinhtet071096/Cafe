@@ -1,0 +1,12 @@
+name,quantity,note,isChecked
+Bread Flour,100kg,Extra strong preferred,false
+Baking Yeast,2kg,Check expiration dates,false
+Salt (Maldon),5kg,For focaccia topping,false
+Oat Milk,24L,Usually 2 cases,true
+Butter (Grass-fed),20kg,Must be unsalted,false
+Cardamom Seeds,500g,Whole pods preferred,false
+Espresso Beans,10kg,Signature house blend,false
+Cinnamon,1kg,Ceylon grade,false
+Apricots,5kg,Dried and halved,false
+Paper Bags,500pcs,Small size for pastries,false
+Takeaway Cups,1000pcs,12oz standard,false

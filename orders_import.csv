@@ -1,0 +1,6 @@
+id,items,total,payment_method,timestamp,date
+LM-1001,"[{""name"":""Sourdough Batard"",""code"":""BRD-01"",""price"":""$8.00"",""quantity"":2}]",17.28,card,2026-04-18T09:30:00Z,4/18/2026
+LM-1002,"[{""name"":""Oat Milk Latte"",""code"":""COF-02"",""price"":""$6.00"",""quantity"":1},{""name"":""Classic Croissant"",""code"":""PAS-01"",""price"":""$4.50"",""quantity"":2}]",16.20,cash,2026-04-18T10:15:00Z,4/18/2026
+LM-1003,"[{""name"":""Heritage Rye"",""code"":""BRD-02"",""price"":""$9.00"",""quantity"":1}]",9.72,card,2026-04-19T08:45:00Z,4/19/2026
+LM-1004,"[{""name"":""Cold Brew"",""code"":""COF-03"",""price"":""$5.50"",""quantity"":2},{""name"":""Apricot Danish"",""code"":""PAS-03"",""price"":""$6.00"",""quantity"":1}]",18.36,card,2026-04-19T14:20:00Z,4/19/2026
+LM-1005,"[{""name"":""Sea Salt Focaccia"",""code"":""BRD-03"",""price"":""$7.00"",""quantity"":3}]",22.68,cash,2026-04-20T08:10:00Z,4/20/2026

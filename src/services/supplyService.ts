@@ -13,9 +13,16 @@ export const supplyService = {
   },
 
   async addItem(name: string, quantity: string = "", note: string = "") {
+    const { data: { user } } = await supabase.auth.getUser();
+    
     const { data, error } = await supabase
       .from('items')
-      .insert([{ name, quantity, note }])
+      .insert([{ 
+        name, 
+        quantity, 
+        note,
+        user_id: user?.id 
+      }])
       .select();
     
     if (error) throw error;

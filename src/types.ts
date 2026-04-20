@@ -26,6 +26,7 @@ export interface SupplyItem {
   note: string;
   quantity: string;
   isChecked: boolean;
+  user_id?: string;
   createdAt: string;
   updatedAt: string;
 }
