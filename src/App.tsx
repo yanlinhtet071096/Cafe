@@ -142,6 +142,16 @@ export default function App() {
 
   return (
     <div className="min-h-screen selection:bg-bakery-gold/30 selection:text-bakery-brown">
+      {/* Portfolio Helper Button */}
+      {user && (
+        <button 
+          onClick={() => orderService.generateDemoData(user.id)}
+          className="fixed bottom-6 right-6 z-[100] bg-bakery-gold/20 hover:bg-bakery-gold text-bakery-gold hover:text-white px-4 py-2 rounded-full text-[10px] uppercase font-bold tracking-widest backdrop-blur-md border border-bakery-gold/30 transition-all shadow-xl"
+        >
+          📷 Generate Demo Data
+        </button>
+      )}
+
       {/* Sales Dashboard */}
       <AnimatePresence>
         {isDashboardOpen && <SalesDashboard onClose={() => setIsDashboardOpen(false)} userProfile={profile} />}

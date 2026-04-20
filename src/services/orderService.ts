@@ -4,20 +4,23 @@ import { supabase } from "../lib/supabase";
 const getStorageKey = (userId?: string) => `lumiere_orders_${userId || 'guest'}`;
 
 export const orderService = {
-  getOrders: async (): Promise<Order[]> => {
+  getOrders: async (userId?: string): Promise<Order[]> => {
     try {
-      // Try to get from Supabase first
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      const activeUserId = userId || (await supabase.auth.getUser()).data.user?.id;
+      if (!activeUserId) return [];
+
+      // Check for demo flag
+      if (localStorage.getItem('portfolio_demo_active') === 'true') {
+        const localData = localStorage.getItem(getStorageKey(activeUserId));
+        if (localData) return JSON.parse(localData);
+      }
 
       let query = supabase.from('orders').select('*');
-
-      // Filter based on role
-      const { data: profile } = await supabase.from('profiles').select('branch_id, role').eq('id', user.id).single();
+      const { data: profile } = await supabase.from('profiles').select('branch_id, role').eq('id', activeUserId).single();
       
       if (profile) {
         if (profile.role === 'staff') {
-          query = query.eq('user_id', user.id);
+          query = query.eq('user_id', activeUserId);
         } else if (profile.role === 'manager') {
           query = query.eq('branch_id', profile.branch_id);
         }
@@ -30,15 +33,14 @@ export const orderService = {
       if (data) {
         return data.map(o => ({
           ...o,
-          paymentMethod: o.payment_method, // mapping snake_case to camelCase
+          paymentMethod: o.payment_method,
           branchId: o.branch_id
         }));
       }
     } catch (err) {
-      console.warn("Supabase fetch failed, falling back to local storage:", err);
+      console.warn("Using local fallback:", err);
     }
 
-    // Fallback to user-specific localStorage
     const { data: { user } } = await supabase.auth.getUser();
     const localData = localStorage.getItem(getStorageKey(user?.id));
     return localData ? JSON.parse(localData) : [];
@@ -82,6 +84,28 @@ export const orderService = {
     const { data: { user } } = await supabase.auth.getUser();
     const data = localStorage.getItem(getStorageKey(user?.id));
     return data ? JSON.parse(data) : [];
+  },
+
+  generateDemoData: async (uid: string) => {
+    const branches = [
+      '4bfdabf8-7ceb-4369-ae1b-fb6502fb6147', // Heritage
+      'fbec8159-4866-449f-967d-dbf1cabb933d'  // Riverside
+    ];
+
+    const demoOrders: Order[] = Array.from({ length: 15 }).map((_, i) => ({
+      id: `LUM-${1000 + i}`,
+      branchId: branches[i % 2],
+      user_id: uid,
+      items: [{ id: '1', name: 'Artisan Sourdough', price: 12, quantity: 2 }],
+      total: 24 + (Math.random() * 50),
+      paymentMethod: i % 2 === 0 ? 'card' : 'cash',
+      timestamp: new Date(Date.now() - (i * 3600000)).toISOString(),
+      date: new Date().toLocaleDateString()
+    }));
+
+    localStorage.setItem(getStorageKey(uid), JSON.stringify(demoOrders));
+    localStorage.setItem('portfolio_demo_active', 'true');
+    window.location.reload(); 
   },
 
   getDailyStats: async () => {
