@@ -3,30 +3,93 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { motion } from "motion/react";
-import { Coffee, Croissant, MapPin, Clock, Instagram, Facebook, Phone, Menu as MenuIcon, X } from "lucide-react";
-import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { Coffee, Croissant, MapPin, Clock, Instagram, Facebook, Phone, Menu as MenuIcon, X, ShoppingCart, Plus, Minus, Trash2, CreditCard, ChevronRight, CheckCircle, Receipt } from "lucide-react";
+import { useState, useMemo } from "react";
+
+interface MenuItem {
+  name: string;
+  price: string;
+  desc: string;
+  id: string;
+}
+
+interface CartItem extends MenuItem {
+  quantity: number;
+}
 
 const MENU_ITEMS = {
   bread: [
-    { name: "Sourdough Batard", price: "$8", desc: "Our signature 36-hour fermented loaf with a dark, crackling crust.", id: "b1" },
-    { name: "Heritage Rye", price: "$9", desc: "Deeply flavored rye with caraway seeds and a soft, dense crumb.", id: "b2" },
-    { name: "Sea Salt Focaccia", price: "$7", desc: "Light, airy bread topped with cold-pressed olive oil and Maldon salt.", id: "b3" },
+    { name: "Sourdough Batard", price: "$8.00", desc: "Our signature 36-hour fermented loaf with a dark, crackling crust.", id: "b1" },
+    { name: "Heritage Rye", price: "$9.00", desc: "Deeply flavored rye with caraway seeds and a soft, dense crumb.", id: "b2" },
+    { name: "Sea Salt Focaccia", price: "$7.00", desc: "Light, airy bread topped with cold-pressed olive oil and Maldon salt.", id: "b3" },
   ],
   coffee: [
-    { name: "V60 Pour Over", price: "$5", desc: "Single-origin beans rotated weekly for the truest flavor profile.", id: "c1" },
-    { name: "Oat Milk Latte", price: "$6", desc: "Double shot of espresso with creamy, perfectly textured oat milk.", id: "c2" },
-    { name: "Cold Brew", price: "$5.5", desc: "18-hour steep results in a smooth, chocolate-forward refreshment.", id: "c3" },
+    { name: "V60 Pour Over", price: "$5.00", desc: "Single-origin beans rotated weekly for the truest flavor profile.", id: "c1" },
+    { name: "Oat Milk Latte", price: "$6.00", desc: "Double shot of espresso with creamy, perfectly textured oat milk.", id: "c2" },
+    { name: "Cold Brew", price: "$5.50", desc: "18-hour steep results in a smooth, chocolate-forward refreshment.", id: "c3" },
   ],
   pastries: [
-    { name: "Classic Croissant", price: "$4.5", desc: "French butter infused layers, hand-rolled every morning.", id: "p1" },
-    { name: "Cardamom Bun", price: "$5", desc: "Swedish-style braided bun with fresh cardamom and pearl sugar.", id: "p2" },
-    { name: "Apricot Danish", price: "$6", desc: "Flaky pastry with vanilla bean custard and poached apricots.", id: "p3" },
+    { name: "Classic Croissant", price: "$4.50", desc: "French butter infused layers, hand-rolled every morning.", id: "p1" },
+    { name: "Cardamom Bun", price: "$5.00", desc: "Swedish-style braided bun with fresh cardamom and pearl sugar.", id: "p2" },
+    { name: "Apricot Danish", price: "$6.00", desc: "Flaky pastry with vanilla bean custard and poached apricots.", id: "p3" },
   ]
 };
 
+type CheckoutStep = "cart" | "payment" | "receipt";
+
 export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("cart");
+  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
+
+  const cartTotal = useMemo(() => {
+    return cart.reduce((sum, item) => sum + parseFloat(item.price.replace("$", "")) * item.quantity, 0);
+  }, [cart]);
+
+  const addToCart = (item: MenuItem) => {
+    setCart(prev => {
+      const existing = prev.find(i => i.id === item.id);
+      if (existing) {
+        return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+      }
+      return [...prev, { ...item, quantity: 1 }];
+    });
+    setIsCartOpen(true);
+  };
+
+  const updateQuantity = (id: string, delta: number) => {
+    setCart(prev => prev.map(item => {
+      if (item.id === id) {
+        const newQty = Math.max(0, item.quantity + delta);
+        return { ...item, quantity: newQty };
+      }
+      return item;
+    }).filter(item => item.quantity > 0));
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleCheckout = () => {
+    if (checkoutStep === "cart") {
+      setCheckoutStep("payment");
+    } else if (checkoutStep === "payment" && paymentMethod) {
+      setCheckoutStep("receipt");
+    }
+  };
+
+  const resetOrder = () => {
+    setCart([]);
+    setCheckoutStep("cart");
+    setPaymentMethod(null);
+    setIsCartOpen(false);
+  };
+
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <div className="min-h-screen selection:bg-bakery-gold/30 selection:text-bakery-brown">
@@ -43,27 +106,257 @@ export default function App() {
             <a href="#contact" className="hover:text-bakery-gold transition-colors">Visit Us</a>
           </div>
 
-          <button 
-            className="md:hidden p-2"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? <X size={24} /> : <MenuIcon size={24} />}
-          </button>
+          <div className="flex items-center gap-4">
+            <button 
+              className="relative p-2 text-bakery-brown hover:text-bakery-gold transition-colors"
+              onClick={() => setIsCartOpen(true)}
+            >
+              <ShoppingCart size={24} />
+              {cartCount > 0 && (
+                <span className="absolute top-0 right-0 bg-bakery-gold text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+            <button 
+              className="md:hidden p-2"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <X size={24} /> : <MenuIcon size={24} />}
+            </button>
+          </div>
         </div>
       </nav>
 
+      {/* Cart Drawer */}
+      <AnimatePresence>
+        {isCartOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !["receipt"].includes(checkoutStep) && setIsCartOpen(false)}
+              className="fixed inset-0 bg-bakery-dark/40 backdrop-blur-sm z-[60]"
+            />
+            <motion.div 
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 h-full w-full max-w-md bg-bakery-cream shadow-2xl z-[70] flex flex-col"
+            >
+              <div className="p-6 border-b border-bakery-brown/5 flex items-center justify-between">
+                <h2 className="text-2xl font-serif font-bold text-bakery-brown">
+                  {checkoutStep === "cart" && "Your Order"}
+                  {checkoutStep === "payment" && "Payment Method"}
+                  {checkoutStep === "receipt" && "Order Confirmed"}
+                </h2>
+                {checkoutStep !== "receipt" && (
+                  <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-bakery-warm rounded-full transition-colors">
+                    <X size={20} />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6">
+                {checkoutStep === "cart" && (
+                  <div className="space-y-6">
+                    {cart.length === 0 ? (
+                      <div className="text-center py-20">
+                        <div className="w-16 h-16 bg-bakery-warm rounded-full flex items-center justify-center mx-auto mb-4 text-bakery-gold/40">
+                          <ShoppingCart size={32} />
+                        </div>
+                        <p className="text-bakery-dark/40 font-medium">Your basket is currently empty.</p>
+                      </div>
+                    ) : (
+                      cart.map((item) => (
+                        <motion.div 
+                          layout
+                          key={item.id} 
+                          className="flex gap-4 group"
+                        >
+                          <div className="flex-1">
+                            <div className="flex justify-between items-start mb-1">
+                              <h4 className="font-serif font-bold text-lg text-bakery-brown">{item.name}</h4>
+                              <span className="font-display italic text-bakery-gold">{item.price}</span>
+                            </div>
+                            <p className="text-xs text-bakery-dark/40 mb-4">{item.desc}</p>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 bg-bakery-warm rounded-full px-3 py-1 scale-90 -ml-2">
+                                <button 
+                                  onClick={() => updateQuantity(item.id, -1)}
+                                  className="p-1 hover:text-bakery-gold transition-colors"
+                                >
+                                  <Minus size={14} />
+                                </button>
+                                <span className="text-xs font-bold w-4 text-center">{item.quantity}</span>
+                                <button 
+                                  onClick={() => updateQuantity(item.id, 1)}
+                                  className="p-1 hover:text-bakery-gold transition-colors"
+                                >
+                                  <Plus size={14} />
+                                </button>
+                              </div>
+                              <button 
+                                onClick={() => removeFromCart(item.id)}
+                                className="text-bakery-dark/20 hover:text-red-400 transition-colors"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {checkoutStep === "payment" && (
+                  <div className="space-y-4">
+                    <p className="text-sm text-bakery-dark/60 mb-6 font-medium">Select how you'd like to pay for your artisanal selection.</p>
+                    {[
+                      { id: "card", name: "Credit or Debit Card", icon: <CreditCard size={20} /> },
+                      { id: "apple", name: "Apple Pay", icon: <div className="w-5 h-5 flex items-center justify-center font-bold text-sm"></div> },
+                      { id: "cash", name: "Cash on Collection", icon: <Receipt size={20} /> },
+                    ].map((method) => (
+                      <button
+                        key={method.id}
+                        onClick={() => setPaymentMethod(method.id)}
+                        className={`w-full p-4 flex items-center gap-4 rounded-2xl border-2 transition-all ${
+                          paymentMethod === method.id 
+                            ? "border-bakery-gold bg-bakery-gold/5 shadow-sm" 
+                            : "border-bakery-brown/5 hover:border-bakery-gold/20 hover:bg-bakery-warm/50"
+                        }`}
+                      >
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                          paymentMethod === method.id ? "bg-bakery-gold text-white" : "bg-bakery-warm text-bakery-brown/40"
+                        }`}>
+                          {method.icon}
+                        </div>
+                        <span className="font-medium text-bakery-brown">{method.name}</span>
+                        {paymentMethod === method.id && (
+                          <div className="ml-auto text-bakery-gold">
+                            <CheckCircle size={20} fill="currentColor" className="text-white" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {checkoutStep === "receipt" && (
+                  <div className="py-8">
+                    <div className="text-center mb-10">
+                      <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <CheckCircle size={40} strokeWidth={1.5} />
+                      </div>
+                      <h3 className="text-3xl font-serif font-bold text-bakery-brown mb-2">Thank you!</h3>
+                      <p className="text-bakery-dark/40 italic">Order #LM-{Math.floor(1000 + Math.random() * 9000)}</p>
+                    </div>
+
+                    <div className="bg-bakery-warm/50 rounded-3xl p-8 border border-bakery-brown/5 space-y-4">
+                      <div className="flex justify-between items-center text-xs uppercase tracking-widest text-bakery-dark/40 font-bold border-b border-bakery-brown/5 pb-4 mb-4">
+                        <span>Item</span>
+                        <span>Total</span>
+                      </div>
+                      {cart.map((item) => (
+                        <div key={item.id} className="flex justify-between items-baseline">
+                          <div className="text-sm">
+                            <span className="font-bold text-bakery-brown">{item.quantity}x</span>
+                            <span className="ml-2 font-medium">{item.name}</span>
+                          </div>
+                          <span className="text-sm font-display italic text-bakery-gold">
+                            ${(parseFloat(item.price.replace("$", "")) * item.quantity).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="pt-6 border-t border-bakery-brown/10 mt-6 block">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-bakery-dark/40 text-sm">Subtotal</span>
+                          <span className="text-sm">${cartTotal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center mb-6">
+                          <span className="text-bakery-dark/40 text-sm">Tax (8%)</span>
+                          <span className="text-sm">${(cartTotal * 0.08).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xl font-serif font-bold text-bakery-brown">Total</span>
+                          <span className="text-xl font-display font-bold text-bakery-gold underline underline-offset-4 decoration-bakery-gold/30">
+                            ${(cartTotal * 1.08).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-12 text-center">
+                      <p className="text-sm text-bakery-dark/60 leading-relaxed mb-8">
+                        Your order is being prepared by our artisanal team. You'll receive a notification when it's ready for collection at our Heritage District location.
+                      </p>
+                      <button 
+                        onClick={resetOrder}
+                        className="w-full py-4 bg-bakery-brown text-bakery-cream rounded-full font-bold hover:bg-bakery-dark transition-all shadow-xl shadow-bakery-brown/10"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {checkoutStep !== "receipt" && cart.length > 0 && (
+                <div className="p-6 bg-bakery-cream border-t border-bakery-brown/5 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-bakery-dark/40 font-medium uppercase tracking-widest text-[10px]">Estimated Total</span>
+                    <span className="text-2xl font-display italic text-bakery-gold font-bold">
+                      ${(checkoutStep === "payment" ? cartTotal * 1.08 : cartTotal).toFixed(2)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    {checkoutStep === "payment" && (
+                      <button 
+                        onClick={() => setCheckoutStep("cart")}
+                        className="flex-1 py-4 bg-bakery-warm text-bakery-brown rounded-full font-bold hover:bg-bakery-brown/5 transition-all text-sm uppercase tracking-widest"
+                      >
+                        Back
+                      </button>
+                    )}
+                    <button 
+                      onClick={handleCheckout}
+                      disabled={checkoutStep === "payment" && !paymentMethod}
+                      className={`flex-[2] py-4 rounded-full font-bold transition-all shadow-xl flex items-center justify-center gap-3 text-sm uppercase tracking-widest ${
+                        checkoutStep === "payment" && !paymentMethod 
+                          ? "bg-bakery-brown/10 text-bakery-brown/30 cursor-not-allowed" 
+                          : "bg-bakery-brown text-bakery-cream hover:bg-bakery-dark shadow-bakery-brown/10"
+                      }`}
+                    >
+                      {checkoutStep === "cart" ? "Checkout" : "Complete Order"}
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Mobile Menu */}
-      {isMenuOpen && (
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="fixed inset-0 z-40 bg-bakery-cream pt-24 px-8 flex flex-col gap-8 md:hidden"
-        >
-          <a href="#menu" onClick={() => setIsMenuOpen(false)} className="text-3xl font-serif">Our Menu</a>
-          <a href="#about" onClick={() => setIsMenuOpen(false)} className="text-3xl font-serif">Atmosphere</a>
-          <a href="#contact" onClick={() => setIsMenuOpen(false)} className="text-3xl font-serif">Visit Us</a>
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed inset-0 z-40 bg-bakery-cream pt-24 px-8 flex flex-col gap-8 md:hidden"
+          >
+            <a href="#menu" onClick={() => setIsMenuOpen(false)} className="text-3xl font-serif">Our Menu</a>
+            <a href="#about" onClick={() => setIsMenuOpen(false)} className="text-3xl font-serif">Atmosphere</a>
+            <a href="#contact" onClick={() => setIsMenuOpen(false)} className="text-3xl font-serif">Visit Us</a>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 px-6 overflow-hidden">
@@ -183,12 +476,20 @@ export default function App() {
               </div>
               <div className="space-y-10">
                 {MENU_ITEMS.bread.map((item) => (
-                  <div key={item.id} className="group cursor-pointer">
-                    <div className="flex justify-between items-baseline mb-2">
+                  <div key={item.id} className="group flex flex-col gap-2">
+                    <div className="flex justify-between items-baseline">
                       <h4 className="text-lg font-medium group-hover:text-bakery-gold transition-colors">{item.name}</h4>
-                      <span className="text-sm font-display italic text-bakery-gold">{item.price}</span>
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm font-display italic text-bakery-gold">{item.price}</span>
+                        <button 
+                          onClick={() => addToCart(item)}
+                          className="w-8 h-8 rounded-full border border-bakery-gold/20 flex items-center justify-center text-bakery-gold hover:bg-bakery-gold hover:text-white transition-all"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-sm text-bakery-dark/40 leading-relaxed">{item.desc}</p>
+                    <p className="text-sm text-bakery-dark/40 leading-relaxed pr-12">{item.desc}</p>
                   </div>
                 ))}
               </div>
@@ -207,12 +508,20 @@ export default function App() {
               </div>
               <div className="space-y-10">
                 {MENU_ITEMS.coffee.map((item) => (
-                  <div key={item.id} className="group cursor-pointer">
-                    <div className="flex justify-between items-baseline mb-2">
+                  <div key={item.id} className="group flex flex-col gap-2">
+                    <div className="flex justify-between items-baseline">
                       <h4 className="text-lg font-medium group-hover:text-bakery-gold transition-colors">{item.name}</h4>
-                      <span className="text-sm font-display italic text-bakery-gold">{item.price}</span>
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm font-display italic text-bakery-gold">{item.price}</span>
+                        <button 
+                          onClick={() => addToCart(item)}
+                          className="w-8 h-8 rounded-full border border-bakery-gold/20 flex items-center justify-center text-bakery-gold hover:bg-bakery-gold hover:text-white transition-all"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-sm text-bakery-dark/40 leading-relaxed">{item.desc}</p>
+                    <p className="text-sm text-bakery-dark/40 leading-relaxed pr-12">{item.desc}</p>
                   </div>
                 ))}
               </div>
@@ -231,12 +540,20 @@ export default function App() {
               </div>
               <div className="space-y-10">
                 {MENU_ITEMS.pastries.map((item) => (
-                  <div key={item.id} className="group cursor-pointer">
-                    <div className="flex justify-between items-baseline mb-2">
+                  <div key={item.id} className="group flex flex-col gap-2">
+                    <div className="flex justify-between items-baseline">
                       <h4 className="text-lg font-medium group-hover:text-bakery-gold transition-colors">{item.name}</h4>
-                      <span className="text-sm font-display italic text-bakery-gold">{item.price}</span>
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm font-display italic text-bakery-gold">{item.price}</span>
+                        <button 
+                          onClick={() => addToCart(item)}
+                          className="w-8 h-8 rounded-full border border-bakery-gold/20 flex items-center justify-center text-bakery-gold hover:bg-bakery-gold hover:text-white transition-all"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-sm text-bakery-dark/40 leading-relaxed">{item.desc}</p>
+                    <p className="text-sm text-bakery-dark/40 leading-relaxed pr-12">{item.desc}</p>
                   </div>
                 ))}
               </div>
